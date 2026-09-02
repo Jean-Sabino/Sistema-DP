@@ -91,16 +91,20 @@ with aba1:
         salario = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal1")
         dias = st.number_input("Dias Trabalhados no Mês", min_value=1, max_value=31, value=30, key="dias1")
         dependentes = st.number_input("Número de Dependentes", min_value=0, value=0, key="dep1")
+        outros_descontos_1 = st.number_input("Outros Descontos (VT, VR, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc1")
 
     with col2:
         bruto = (salario / 30) * dias
         inss = calcular_inss_progressivo(bruto)
         irrf, aliquota_ir = calcular_irrf(bruto - inss, dependentes)
-        liquido = bruto - inss - irrf
+        liquido = bruto - inss - irrf - outros_descontos_1
 
         st.metric(label="Salário Bruto Proporcional", value=f"R$ {bruto:,.2f}")
-        st.metric(label="Desconto INSS", value=f"R$ {inss:,.2f}", delta_color="inverse")
-        st.metric(label=f"Desconto IRRF ({aliquota_ir}%)", value=f"R$ {irrf:,.2f}", delta_color="inverse")
+        st.metric(label="Desconto INSS", value=f"R$ {inss:,.2f}")
+        st.metric(label=f"Desconto IRRF ({aliquota_ir}%)", value=f"R$ {irrf:,.2f}")
+        if outros_descontos_1 > 0:
+            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_1:,.2f}")
+            
         st.subheader(f"Valor Líquido: R$ {liquido:,.2f}")
 
 # --- ABA 2: DÉCIMO TERCEIRO ---
@@ -112,16 +116,20 @@ with aba2:
         salario_13 = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal2")
         meses_13 = st.number_input("Meses Trabalhados no Ano (mín. 15 dias)", min_value=1, max_value=12, value=12, key="mes2")
         dep_13 = st.number_input("Número de Dependentes", min_value=0, value=0, key="dep2")
+        outros_descontos_2 = st.number_input("Outros Descontos (Adiantamentos, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc2")
 
     with col2:
         bruto_13 = (salario_13 / 12) * meses_13
         inss_13 = calcular_inss_progressivo(bruto_13)
         irrf_13, aliq_13 = calcular_irrf(bruto_13 - inss_13, dep_13)
-        liq_13 = bruto_13 - inss_13 - irrf_13
+        liq_13 = bruto_13 - inss_13 - irrf_13 - outros_descontos_2
 
         st.metric(label="13º Bruto", value=f"R$ {bruto_13:,.2f}")
         st.metric(label="Desconto INSS", value=f"R$ {inss_13:,.2f}")
         st.metric(label=f"Desconto IRRF ({aliq_13}%)", value=f"R$ {irrf_13:,.2f}")
+        if outros_descontos_2 > 0:
+            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_2:,.2f}")
+            
         st.subheader(f"13º Líquido: R$ {liq_13:,.2f}")
 
 # --- ABA 3: FÉRIAS ---
@@ -132,15 +140,20 @@ with aba3:
     with col1:
         salario_ferias = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal3")
         meses_ferias = st.number_input("Meses do Período Aquisitivo", min_value=1, max_value=12, value=12, key="mes3")
+        outros_descontos_3 = st.number_input("Outros Descontos (Faltas não justificadas, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc3")
 
     with col2:
         ferias_simples = (salario_ferias / 12) * meses_ferias
         terco = ferias_simples / 3
-        total_ferias = ferias_simples + terco
+        total_ferias_bruto = ferias_simples + terco
+        total_ferias_liquido = total_ferias_bruto - outros_descontos_3
 
         st.metric(label="Férias Proporcionais", value=f"R$ {ferias_simples:,.2f}")
         st.metric(label="Adicional Constitucional (1/3)", value=f"R$ {terco:,.2f}")
-        st.subheader(f"Total a Receber: R$ {total_ferias:,.2f}")
+        if outros_descontos_3 > 0:
+            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_3:,.2f}")
+            
+        st.subheader(f"Total Líquido a Receber: R$ {total_ferias_liquido:,.2f}")
 
 # --- ABA 4: AVISO PRÉVIO ---
 with aba4:
