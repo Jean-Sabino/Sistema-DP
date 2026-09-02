@@ -88,24 +88,40 @@ with aba1:
     col1, col2 = st.columns(2)
     
     with col1:
+        st.subheader("📌 Entradas & Proventos")
         salario = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal1")
         dias = st.number_input("Dias Trabalhados no Mês", min_value=1, max_value=31, value=30, key="dias1")
+        adicionais = st.number_input("Adicionais (HE, Insalubridade, Periculosidade, etc.) (R$)", min_value=0.0, value=0.00, step=50.00, key="adic1")
         dependentes = st.number_input("Número de Dependentes", min_value=0, value=0, key="dep1")
-        outros_descontos_1 = st.number_input("Outros Descontos (VT, VR, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc1")
+
+        st.subheader("🔻 Descontos Específicos")
+        desc_vt = st.number_input("Vale-Transporte (R$)", min_value=0.0, value=0.00, step=10.00, key="vt1")
+        desc_vr = st.number_input("Vale-Refeição/Alimentação (R$)", min_value=0.0, value=0.00, step=10.00, key="vr1")
+        desc_saude = st.number_input("Plano de Saúde / Odonto (R$)", min_value=0.0, value=0.00, step=10.00, key="saude1")
+        desc_outros = st.number_input("Outros Descontos (Faltas, Empréstimos, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="outros1")
 
     with col2:
-        bruto = (salario / 30) * dias
-        inss = calcular_inss_progressivo(bruto)
-        irrf, aliquota_ir = calcular_irrf(bruto - inss, dependentes)
-        liquido = bruto - inss - irrf - outros_descontos_1
+        # Base bruta inclui salário proporcional + adicionais com incidência
+        bruto_proporcional = (salario / 30) * dias
+        bruto_total = bruto_proporcional + adicionais
+        
+        inss = calcular_inss_progressivo(bruto_total)
+        irrf, aliquota_ir = calcular_irrf(bruto_total - inss, dependentes)
+        
+        total_descontos_diversos = desc_vt + desc_vr + desc_saude + desc_outros
+        total_descontos_geral = inss + irrf + total_descontos_diversos
+        liquido = bruto_total - total_descontos_geral
 
-        st.metric(label="Salário Bruto Proporcional", value=f"R$ {bruto:,.2f}")
+        st.subheader("📊 Resumo do Cálculo")
+        st.metric(label="Proventos Totais (Salário Proporcional + Adicionais)", value=f"R$ {bruto_total:,.2f}")
         st.metric(label="Desconto INSS", value=f"R$ {inss:,.2f}")
         st.metric(label=f"Desconto IRRF ({aliquota_ir}%)", value=f"R$ {irrf:,.2f}")
-        if outros_descontos_1 > 0:
-            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_1:,.2f}")
+        
+        if total_descontos_diversos > 0:
+            st.metric(label="Outros Descontos Somados (VT, VR, Saúde, etc.)", value=f"R$ {total_descontos_diversos:,.2f}")
             
-        st.subheader(f"Valor Líquido: R$ {liquido:,.2f}")
+        st.markdown("---")
+        st.subheader(f"Valor Líquido a Receber: R$ {liquido:,.2f}")
 
 # --- ABA 2: DÉCIMO TERCEIRO ---
 with aba2:
@@ -115,22 +131,30 @@ with aba2:
     with col1:
         salario_13 = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal2")
         meses_13 = st.number_input("Meses Trabalhados no Ano (mín. 15 dias)", min_value=1, max_value=12, value=12, key="mes2")
+        adicionais_13 = st.number_input("Média de Adicionais/Comissões no Ano (R$)", min_value=0.0, value=0.00, step=50.00, key="adic2")
         dep_13 = st.number_input("Número de Dependentes", min_value=0, value=0, key="dep2")
-        outros_descontos_2 = st.number_input("Outros Descontos (Adiantamentos, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc2")
+
+        st.subheader("🔻 Descontos do 13º")
+        adiantamento_13 = st.number_input("Adiantamento da 1ª Parcela (R$)", min_value=0.0, value=0.00, step=100.00, key="adiant2")
+        outros_desc_13 = st.number_input("Outros Descontos no 13º (R$)", min_value=0.0, value=0.00, step=10.00, key="desc_outros2")
 
     with col2:
-        bruto_13 = (salario_13 / 12) * meses_13
+        bruto_13 = ((salario_13 + adicionais_13) / 12) * meses_13
         inss_13 = calcular_inss_progressivo(bruto_13)
         irrf_13, aliq_13 = calcular_irrf(bruto_13 - inss_13, dep_13)
-        liq_13 = bruto_13 - inss_13 - irrf_13 - outros_descontos_2
+        liq_13 = bruto_13 - inss_13 - irrf_13 - adiantamento_13 - outros_desc_13
 
-        st.metric(label="13º Bruto", value=f"R$ {bruto_13:,.2f}")
+        st.subheader("📊 Resumo do 13º")
+        st.metric(label="13º Bruto Total", value=f"R$ {bruto_13:,.2f}")
         st.metric(label="Desconto INSS", value=f"R$ {inss_13:,.2f}")
         st.metric(label=f"Desconto IRRF ({aliq_13}%)", value=f"R$ {irrf_13:,.2f}")
-        if outros_descontos_2 > 0:
-            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_2:,.2f}")
+        if adiantamento_13 > 0:
+            st.metric(label="Dedução de Adiantamento (1ª Parcela)", value=f"R$ {adiantamento_13:,.2f}")
+        if outros_desc_13 > 0:
+            st.metric(label="Outros Descontos", value=f"R$ {outros_desc_13:,.2f}")
             
-        st.subheader(f"13º Líquido: R$ {liq_13:,.2f}")
+        st.markdown("---")
+        st.subheader(f"13º Líquido a Receber: R$ {liq_13:,.2f}")
 
 # --- ABA 3: FÉRIAS ---
 with aba3:
@@ -139,21 +163,28 @@ with aba3:
     
     with col1:
         salario_ferias = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal3")
+        adicionais_ferias = st.number_input("Média de Adicionais no Período (R$)", min_value=0.0, value=0.00, step=50.00, key="adic3")
         meses_ferias = st.number_input("Meses do Período Aquisitivo", min_value=1, max_value=12, value=12, key="mes3")
-        outros_descontos_3 = st.number_input("Outros Descontos (Faltas não justificadas, etc.) (R$)", min_value=0.0, value=0.00, step=10.00, key="desc3")
+
+        st.subheader("🔻 Descontos de Férias")
+        desc_faltas_ferias = st.number_input("Desconto por Faltas Não Justificadas (R$)", min_value=0.0, value=0.00, step=10.00, key="faltas3")
+        outros_desc_ferias = st.number_input("Outros Descontos (R$)", min_value=0.0, value=0.00, step=10.00, key="desc_outros3")
 
     with col2:
-        ferias_simples = (salario_ferias / 12) * meses_ferias
+        base_ferias = salario_ferias + adicionais_ferias
+        ferias_simples = (base_ferias / 12) * meses_ferias
         terco = ferias_simples / 3
         total_ferias_bruto = ferias_simples + terco
-        total_ferias_liquido = total_ferias_bruto - outros_descontos_3
+        total_ferias_liquido = total_ferias_bruto - desc_faltas_ferias - outros_desc_ferias
 
-        st.metric(label="Férias Proporcionais", value=f"R$ {ferias_simples:,.2f}")
+        st.subheader("📊 Resumo das Férias")
+        st.metric(label="Férias Proporcionais (com Adicionais)", value=f"R$ {ferias_simples:,.2f}")
         st.metric(label="Adicional Constitucional (1/3)", value=f"R$ {terco:,.2f}")
-        if outros_descontos_3 > 0:
-            st.metric(label="Outros Descontos", value=f"R$ {outros_descontos_3:,.2f}")
+        if (desc_faltas_ferias + outros_desc_ferias) > 0:
+            st.metric(label="Descontos Totais", value=f"R$ {(desc_faltas_ferias + outros_desc_ferias):,.2f}")
             
-        st.subheader(f"Total Líquido a Receber: R$ {total_ferias_liquido:,.2f}")
+        st.markdown("---")
+        st.subheader(f"Total Líquido de Férias: R$ {total_ferias_liquido:,.2f}")
 
 # --- ABA 4: AVISO PRÉVIO ---
 with aba4:
@@ -162,11 +193,13 @@ with aba4:
     
     with col1:
         salario_aviso = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal4")
+        adicionais_aviso = st.number_input("Média de Adicionais (R$)", min_value=0.0, value=0.00, step=50.00, key="adic4")
         anos_trabalhados = st.number_input("Anos Completos na Empresa", min_value=0, max_value=30, value=1, key="ano4")
 
     with col2:
+        base_aviso = salario_aviso + adicionais_aviso
         dias_aviso = min(30 + (anos_trabalhados * 3), 90)
-        valor_aviso = (salario_aviso / 30) * dias_aviso
+        valor_aviso = (base_aviso / 30) * dias_aviso
 
         st.info(f"Direito adquirido: **{dias_aviso} dias** de aviso prévio.")
         st.subheader(f"Valor do Aviso Prévio: R$ {valor_aviso:,.2f}")
@@ -177,7 +210,7 @@ with aba5:
     col1, col2 = st.columns(2)
     
     with col1:
-        salario_fgts = st.number_input("Salário Bruto do Mês (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal5")
+        salario_fgts = st.number_input("Salário Bruto Total do Mês (Salário + Adicionais) (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal5")
 
     with col2:
         valor_fgts = salario_fgts * 0.08
