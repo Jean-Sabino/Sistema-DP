@@ -54,20 +54,17 @@ def calcular_irrf(rendimento_bruto, inss_pago, num_dependentes=0):
     - De R$ 5.000,01 a R$ 7.350,00: Faixa de transição com redutor
     - Acima de R$ 7.350,00: Tabela progressiva tradicional
     """
-    # 1. Regra de Isenção Direta até R$ 5.000,00
     if rendimento_bruto <= 5000.00:
         return 0.0, 0.0
 
     DEDUCAO_DEPENDENTE = 189.59
     DEDUCAO_SIMPLIFICADA = 607.20
 
-    # 2. Base de Cálculo (Legal x Simplificada)
     base_legal = rendimento_bruto - inss_pago - (num_dependentes * DEDUCAO_DEPENDENTE)
     base_simplificada = rendimento_bruto - DEDUCAO_SIMPLIFICADA
 
     base_calculo = min(base_legal, base_simplificada)
 
-    # 3. Tabela Progressiva de Enquadramento
     if base_calculo < 2428.81:
         imposto_inicial = 0.0
         aliquota = 0.0
@@ -86,7 +83,6 @@ def calcular_irrf(rendimento_bruto, inss_pago, num_dependentes=0):
 
     imposto_inicial = max(0.0, imposto_inicial)
 
-    # 4. Redutor de Transição para Rendimentos entre R$ 5.000,01 e R$ 7.350,00
     if 5000.01 <= rendimento_bruto <= 7350.00:
         redutor = 978.62 - (0.133145 * rendimento_bruto)
         redutor = max(0.0, redutor)
@@ -226,7 +222,7 @@ with aba3:
         st.metric(label="Adicional Constitucional (1/3)", value=f"R$ {terco:,.2f}")
         st.metric(label="Total Bruto das Férias", value=f"R$ {total_ferias_bruto:,.2f}")
         st.metric(label="Desconto INSS", value=f"R$ {inss_ferias:,.2f}")
-        st.metric(label=f"Desconto IRRF ({aliq_ferias}%)", value=f"R$ {irrf_ferias:,.2f}")
+        st.metric(label="Desconto IRRF", value=f"R$ {irrf_ferias:,.2f}")
         
         if (desc_faltas_ferias + outros_desc_ferias) > 0:
             st.metric(label="Outros Descontos (Faltas, etc.)", value=f"R$ {(desc_faltas_ferias + outros_desc_ferias):,.2f}")
@@ -270,11 +266,6 @@ with aba6:
     col1, col2 = st.columns(2)
     
     with col1:
-        saldo_fgts = st.number_input("Saldo Acumulado no Extrato do FGTS (R$)", min_value=0.0, value=5000.00, step=500.00, key="sal6")
-
-    with col2:
-        multa = saldo_fgts * 0.40
-        st.subheader(f"Valor da Multa (40%): R$ {multa:,.2f}")
         saldo_fgts = st.number_input("Saldo Acumulado no Extrato do FGTS (R$)", min_value=0.0, value=5000.00, step=500.00, key="sal6")
 
     with col2:
