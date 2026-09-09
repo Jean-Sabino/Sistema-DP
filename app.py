@@ -49,19 +49,25 @@ def calcular_inss_progressivo(salario_bruto):
 
 def calcular_irrf(rendimento_bruto, inss_pago, num_dependentes=0):
     """
-    Calcula o IRRF conforme a Tabela 2026:
-    - Compara Dedução Legal (INSS + Dependentes) x Dedução Simplificada (R$ 607,20)
-    - Aplica alíquotas e deduções de 2026
-    - Aplica o Redutor Final conforme faixa de renda
+    Calcula o IRRF conforme as regras de 2026:
+    - Salário bruto até R$ 5.000,00: ISENÇÃO TOTAL (R$ 0,00)
+    - De R$ 5.000,01 a R$ 7.350,00: Faixa de transição com redutor
+    - Acima de R$ 7.350,00: Tabela progressiva tradicional
     """
+    # 1. Regra de Isenção Direta até R$ 5.000,00
+    if rendimento_bruto <= 5000.00:
+        return 0.0, 0.0
+
     DEDUCAO_DEPENDENTE = 189.59
     DEDUCAO_SIMPLIFICADA = 607.20
 
+    # 2. Base de Cálculo (Legal x Simplificada)
     base_legal = rendimento_bruto - inss_pago - (num_dependentes * DEDUCAO_DEPENDENTE)
     base_simplificada = rendimento_bruto - DEDUCAO_SIMPLIFICADA
 
     base_calculo = min(base_legal, base_simplificada)
 
+    # 3. Tabela Progressiva de Enquadramento
     if base_calculo < 2428.81:
         imposto_inicial = 0.0
         aliquota = 0.0
@@ -80,13 +86,8 @@ def calcular_irrf(rendimento_bruto, inss_pago, num_dependentes=0):
 
     imposto_inicial = max(0.0, imposto_inicial)
 
-    # Redutores Finais do Imposto
-    if rendimento_bruto <= 5000.00:
-        if imposto_inicial <= 312.89:
-            imposto_final = 0.0
-        else:
-            imposto_final = imposto_inicial
-    elif 5000.01 <= rendimento_bruto <= 7350.00:
+    # 4. Redutor de Transição para Rendimentos entre R$ 5.000,01 e R$ 7.350,00
+    if 5000.01 <= rendimento_bruto <= 7350.00:
         redutor = 978.62 - (0.133145 * rendimento_bruto)
         redutor = max(0.0, redutor)
         imposto_final = max(0.0, imposto_inicial - redutor)
@@ -116,7 +117,7 @@ with aba1:
     
     with col1:
         st.subheader("📌 Entradas & Proventos")
-        salario = st.number_input("Salário Base (R$)", min_value=0.0, value=2000.00, step=100.00, key="sal1")
+        salario = st.number_input("Salário Base (R$)", min_value=0.0, value=5000.00, step=100.00, key="sal1")
         dias = st.number_input("Dias Trabalhados no Mês", min_value=1, max_value=31, value=30, key="dias1")
         adicionais = st.number_input("Adicionais (HE, Insalubridade, Periculosidade, etc.) (R$)", min_value=0.0, value=0.00, step=50.00, key="adic1")
         dependentes = st.number_input("Número de Dependentes", min_value=0, value=0, key="dep1")
@@ -169,7 +170,6 @@ with aba2:
         bruto_13 = ((salario_13 + adicionais_13) / 12) * meses_13
         
         if "1ª Parcela" in parcela_13:
-            # 1ª parcela é 50% do bruto sem incidência de INSS e IRRF
             bruto_parcela = bruto_13 / 2
             inss_13 = 0.0
             irrf_13 = 0.0
@@ -177,7 +177,6 @@ with aba2:
             liq_13 = bruto_parcela - outros_desc_13
             st.info("ℹ️ A 1ª Parcela do 13º Salário não tem incidência de INSS e IRRF.")
         else:
-            # 2ª parcela calcula INSS/IRRF sobre o total e desconta o adiantamento
             inss_13 = calcular_inss_progressivo(bruto_13)
             irrf_13, aliq_13 = calcular_irrf(bruto_13, inss_13, dep_13)
             liq_13 = bruto_13 - inss_13 - irrf_13 - adiantamento_13 - outros_desc_13
@@ -216,7 +215,6 @@ with aba3:
         terco = ferias_simples / 3
         total_ferias_bruto = ferias_simples + terco
         
-        # Férias têm incidência de INSS e IRRF sobre o valor bruto (Férias + 1/3)
         inss_ferias = calcular_inss_progressivo(total_ferias_bruto)
         irrf_ferias, aliq_ferias = calcular_irrf(total_ferias_bruto, inss_ferias, dep_ferias)
         
@@ -272,6 +270,11 @@ with aba6:
     col1, col2 = st.columns(2)
     
     with col1:
+        saldo_fgts = st.number_input("Saldo Acumulado no Extrato do FGTS (R$)", min_value=0.0, value=5000.00, step=500.00, key="sal6")
+
+    with col2:
+        multa = saldo_fgts * 0.40
+        st.subheader(f"Valor da Multa (40%): R$ {multa:,.2f}")
         saldo_fgts = st.number_input("Saldo Acumulado no Extrato do FGTS (R$)", min_value=0.0, value=5000.00, step=500.00, key="sal6")
 
     with col2:
